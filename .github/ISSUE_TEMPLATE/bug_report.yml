@@ -1,0 +1,52 @@
+name: Bug report
+about: Report a reproducible problem without sharing wallet secrets
+title: "[Bug] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never post a seed phrase, private key, recovery password, OTP, Waypoint token, client shard, `.env` file, or authenticated browser storage.**
+        Use synthetic or masked addresses when the full address is not necessary.
+  - type: input
+    id: version
+    attributes:
+      label: Project commit/version
+      placeholder: e.g. git commit SHA or 0.3.0
+    validations:
+      required: true
+  - type: dropdown
+    id: step
+    attributes:
+      label: Failing step
+      options:
+        - install / typecheck / tests
+        - inspect
+        - prepare
+        - local Waypoint signer
+        - verify
+        - relay-check
+        - relay
+        - post-relay verification
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Sanitized error message
+      description: Remove all secrets and authenticated payloads before posting.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Secret-safety confirmation
+      options:
+        - label: I verified that this report contains no private key, seed phrase, password, OTP, Waypoint token, client shard, `.env` contents, or other active credential.
+          required: true
