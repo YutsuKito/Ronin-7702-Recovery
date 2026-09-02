@@ -1,5 +1,5 @@
 name: Bug report
-about: Report a reproducible problem without sharing wallet secrets
+description: Report a reproducible problem without sharing wallet secrets
 title: "[Bug] "
 labels: []
 body:
