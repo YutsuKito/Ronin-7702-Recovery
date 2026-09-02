@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.next/
+signer-next/.next/
+.env
+.env.*
+!.env.example
+rescue-plan*.json
+signed-rescue*.json
+*.log
+.DS_Store
+coverage/
