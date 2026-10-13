@@ -12,7 +12,8 @@ describe('checkDeauthorizationAtReceiptBlock', () => {
       readCode,
     )
 
-    expect(readCode).toHaveBeenCalledExactlyOnceWith(receiptBlockNumber)
+    expect(readCode).toHaveBeenCalledTimes(1)
+    expect(readCode).toHaveBeenCalledWith(receiptBlockNumber)
     expect(result).toEqual({
       receiptBlockNumber,
       victimCodeAfter: '0x',
