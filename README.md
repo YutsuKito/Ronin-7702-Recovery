@@ -19,8 +19,21 @@ The tool is designed for a recovery deadlock where a compromised account cannot 
 - The generated signature must recover exactly the victim address.
 - Relay requires a separate clean wallet.
 - Relay runs a fresh nonce/delegation/signature preflight before broadcast.
+- The post-receipt check reads the victim's code at the **mined receipt block**, not at `latest`.
+- A successful outer transaction receipt alone does **not** prove that an EIP-7702 authorization was applied.
 - Broadcast requires two explicit opt-ins: `ALLOW_BROADCAST=true` and `--broadcast`.
 - The relayer private key must derive exactly the `--relayer` address supplied to the command.
+
+## Understand the compromise before recovery
+
+**A malicious EIP-7702 delegation is not the same thing as an exposed signing key.** These situations have different security implications:
+
+| Scenario | What deauthorization does | What to do next |
+| --- | --- | --- |
+| **Delegation-only compromise:** the owner was tricked into signing a malicious EIP-7702 authorization, but the seed/private key or Waypoint signing authority was not exposed. | Removes that delegation and its associated execution path. The already-consumed authorization cannot be replayed after the authority nonce advances. | Check transaction history, approvals and any other permissions or changes caused while delegated. The account is not automatically free of every other risk. |
+| **Signing-authority compromise:** a private key, recoverable MPC signing capability, authenticated signing session or other relevant credential remains under attacker control. | Removes the current delegation but **does not revoke that independent signing authority**. The attacker might sign a new authorization or transfer assets. | Treat this as a time-sensitive rescue window. Move assets to a new, securely controlled wallet and follow the wallet provider's official credential/session recovery guidance. |
+
+A stale authorization with an already-consumed nonce cannot be replayed as-is. However, a nonce can change **after preflight but before inclusion**, including through activity enabled by the currently delegated code. An attacker with independent signing authority may also produce fresh authorizations. Do not assume a successful preflight guarantees a successful on-chain deauthorization.
 
 ## Requirements
 
@@ -124,6 +137,12 @@ The tool refuses to broadcast if the relayer private key derives a different add
 
 ### 7. Verify cleanup
 
+The relay command checks the affected account's code at `receipt.blockNumber`, and prints the receipt block and whether the delegation was cleared. An invalid/stale EIP-7702 authorization can be **skipped while the relayer transaction receipt still says `success`**. If the block-specific check fails, the CLI reports failure: **do not blindly rebroadcast the same authorization**.
+
+This historical-state check requires an RPC that supports `eth_getCode` at the inclusion block. If that RPC query fails, verification is inconclusive; examine the mined transaction and account before taking any further action.
+
+You can independently inspect the current state afterward:
+
 ```bash
 npm run rescue -- inspect 0xYOUR_COMPROMISED_ADDRESS
 ```
@@ -138,7 +157,7 @@ currentDelegate: null
 
 ## After recovery
 
-Removing the delegation creates a **rescue window**. It does not prove that every credential or active session related to the old wallet is safe. Move valuable assets to a newly secured wallet and rotate credentials/sessions as appropriate.
+Whether deauthorization restores exclusive control depends on the **compromise type**, not merely the receipt status. For delegation-only phishing, removal can eliminate the attacker's delegated execution path, but approvals and other side effects may remain. If any signing authority or credential was compromised, the attacker may be able to sign again, so prioritize transferring assets to a newly secured wallet. Never assume a credential/session rotation worked without confirmation from the relevant wallet provider.
 
 ## Waypoint implementation note
 
