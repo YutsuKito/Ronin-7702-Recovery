@@ -12,6 +12,7 @@ import { ronin } from 'viem/chains'
 import { createRoninPublicClient } from './client.js'
 import { getRpcUrl, RONIN_CHAIN_ID, ZERO_ADDRESS } from './config.js'
 import { inspectWallet } from './inspect.js'
+import { checkDeauthorizationAtReceiptBlock } from './receipt-verification.js'
 import type { RescuePlan } from './types.js'
 import { verifyPlanSignature } from './verify.js'
 
@@ -24,6 +25,7 @@ export interface RelayResult {
   transactionHash: Hex
   relayer: Address
   receiptStatus: 'success' | 'reverted'
+  receiptBlockNumber: bigint
   victimCodeAfter: Hex
   delegationCleared: boolean
 }
@@ -178,13 +180,31 @@ export async function relayRescuePlan(
   })
 
   const receipt = await publicClient.waitForTransactionReceipt({ hash: transactionHash })
-  const after = await inspectWallet(plan.victim)
+
+  // EIP-7702 can skip a stale/invalid authorization without reverting the
+  // relayer transaction. Verify the victim code at the mined receipt block,
+  // not at 'latest', which could already reflect a later delegation change.
+  let postState
+  try {
+    postState = await checkDeauthorizationAtReceiptBlock(
+      receipt,
+      blockNumber => publicClient.getCode({ address: plan.victim, blockNumber }),
+    )
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    throw new Error(
+      `Relay transaction ${transactionHash} was included in block ${receipt.blockNumber}, ` +
+      `but post-receipt delegation verification failed: ${reason}. ` +
+      'Do not automatically rebroadcast; inspect the transaction and account first.',
+    )
+  }
 
   return {
     transactionHash,
     relayer: account.address,
     receiptStatus: receipt.status,
-    victimCodeAfter: after.code,
-    delegationCleared: after.code === '0x',
+    receiptBlockNumber: postState.receiptBlockNumber,
+    victimCodeAfter: postState.victimCodeAfter,
+    delegationCleared: postState.delegationCleared,
   }
 }
