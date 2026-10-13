@@ -71,7 +71,9 @@ npm run rescue -- relay rescue-plan.json \
 
 ## 7. Confirm on-chain state
 
-Run `inspect` again. The cleanup is successful when the affected account has:
+The relay command checks `eth_getCode` at the transaction receipt's mined `blockNumber`. A successful receipt alone does not prove the authorization was applied; a stale authorization can be skipped. The CLI now reports failure if the code at that block is still delegated or the receipt reverted. If your RPC cannot serve historical state, do not rebroadcast blindly: investigate the transaction first.
+
+Run `inspect` again to independently check the latest account state. The cleanup is successful when the affected account has:
 
 ```text
 code: 0x
