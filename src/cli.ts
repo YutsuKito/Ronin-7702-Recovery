@@ -87,8 +87,17 @@ program.command('relay')
     console.log(`Relayer:            ${result.relayer}`)
     console.log(`Transaction:        ${result.transactionHash}`)
     console.log(`Receipt:            ${result.receiptStatus}`)
-    console.log(`Victim code after:  ${result.victimCodeAfter}`)
+    console.log(`Receipt block:      ${result.receiptBlockNumber}`)
+    console.log(`Victim code at block: ${result.victimCodeAfter}`)
     console.log(`Delegation cleared: ${result.delegationCleared}`)
+
+    if (!result.delegationCleared) {
+      throw new Error(
+        `The receipt did not confirm EIP-7702 cleanup at block ${result.receiptBlockNumber}. ` +
+        `Transaction: ${result.transactionHash}. Do not blindly rebroadcast; ` +
+        'inspect the account and create a fresh plan if it is still delegated.',
+      )
+    }
   })
 
 async function loadPlan(path: string): Promise<RescuePlan> {
